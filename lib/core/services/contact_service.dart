@@ -30,4 +30,14 @@ class ContactService {
       log(e.toString());
     }
   }
+
+  Future<void> addContacts(List<Contact> contacts) async {
+    try {
+      await Future.forEach(
+          contacts, (element) => FlutterContacts.insertContact(element));
+    } catch (e) {
+      Fluttertoast.showToast(msg: e.toString());
+      log(e.toString());
+    }
+  }
 }

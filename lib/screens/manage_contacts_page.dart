@@ -67,13 +67,7 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
                       trailing: getContactPicture(item),
                       title: Text(item.displayName),
                       subtitle: getContactItemSubtitle(item),
-                      onTap: () {
-                        try {
-                          print(item.toVCard());
-                        } catch (e) {
-                          print(e);
-                        }
-                      },
+                      onTap: () => toggleContactItem(item),
                       leading: isSelectionMode
                           ? selectedContacts.contains(item)
                               ? const Icon(
@@ -206,6 +200,7 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
                         color: Colors.white,
                       ),
                     ),
+                    /*  */
                     title: const Text('Export Selected Contacts'),
                     onTap: () => exportContacts(selectedContacts)),
                 const Divider(),

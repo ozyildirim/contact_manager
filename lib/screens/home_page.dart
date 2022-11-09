@@ -1,3 +1,4 @@
+import 'package:contact_manager/screens/import_contacts_page.dart';
 import 'package:contact_manager/widgets/home_menu_button.dart';
 import 'package:contact_manager/screens/manage_contacts_page.dart';
 import 'package:flutter/material.dart';
@@ -19,13 +20,13 @@ class HomePage extends StatelessWidget {
             children: [
               SizedBox(
                 height: size.height * 0.4,
-                child: Center(
+                child: const Center(
                   child: Text(
                     "Contact Manager\nPro",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 34,
-                    ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 34,
+                        color: Colors.white),
                   ),
                 ),
               ),
@@ -55,7 +56,17 @@ class HomePage extends StatelessWidget {
                       HomeMenuButton(
                           title: "Sync", callback: () {}, icon: Icons.backup),
                       HomeMenuButton(
-                          title: "Export", callback: () {}, icon: Icons.backup),
+                          title: "Import",
+                          callback: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ImportContactsPage(),
+                              ),
+                            );
+                          },
+                          icon: Icons.backup),
                     ],
                   ),
                 ),
