@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/helpers/locator.dart';
-import 'screens/home_page.dart';
+import 'screens/landing_page.dart';
 
 void main() {
   setupLocator();
@@ -26,7 +26,7 @@ class App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Contact Manager Pro',
         theme: themeData,
-        home: const HomePage(),
+        home: const LandingPage(),
       ),
     );
   }

@@ -1,6 +1,10 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:contact_manager/core/providers/contact_provider.dart';
+import 'package:contact_manager/screens/landing_page.dart';
+import 'package:contact_manager/widgets/bottom_sheet_widget.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +12,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_contacts/vcard.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/contact_avatar_widget.dart';
 
@@ -19,6 +24,7 @@ class ImportContactsPage extends StatefulWidget {
 }
 
 class _ImportContactsPageState extends State<ImportContactsPage> {
+  late ContactProvider contactProvider;
   bool isSelectionMode = false;
 
   List<Contact>? fetchedContacts;
@@ -27,6 +33,7 @@ class _ImportContactsPageState extends State<ImportContactsPage> {
   @override
   void initState() {
     super.initState();
+    contactProvider = Provider.of<ContactProvider>(context, listen: false);
     selectedContacts.clear();
     Future.delayed(const Duration(milliseconds: 500), showImportSourceDialog);
   }
@@ -68,9 +75,9 @@ class _ImportContactsPageState extends State<ImportContactsPage> {
                   } else {
                     var item = fetchedContacts![index - 1];
                     return ListTile(
-                      trailing: getContactPicture(item),
+                      trailing: contactProvider.getContactPicture(item),
                       title: Text(item.displayName),
-                      subtitle: getContactItemSubtitle(item),
+                      subtitle: contactProvider.getContactItemSubtitle(item),
                       onTap: () => toggleContactItem(item),
                       leading: isSelectionMode
                           ? selectedContacts.contains(item)
@@ -123,62 +130,69 @@ class _ImportContactsPageState extends State<ImportContactsPage> {
     showModalBottomSheet(
         isDismissible: true,
         context: context,
-        builder: (context) => BottomSheetWidget());
-  }
-
-  Widget BottomSheetWidget() {
-    return SafeArea(
-      bottom: true,
-      child: BottomSheet(
-          enableDrag: false,
-          onClosing: () {},
-          builder: (context) {
-            return Wrap(
-              children: <Widget>[
-                const ListTile(
-                    title: Text(
-                      'Select Import Source',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                    ),
-                    onTap: null),
-                const Divider(),
-                ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.pink,
-                      child: Icon(
-                        FontAwesomeIcons.fileCode,
-                        color: Colors.white,
-                      ),
-                    ),
-                    title: const Text('Pick VCF File'),
-                    onTap: getVcfFromFile),
-                const Divider(),
-                const ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Icon(
-                        FontAwesomeIcons.googleDrive,
-                        color: Colors.white,
-                      ),
-                    ),
-                    /*  */
-                    title: Text('Import from Google Drive'),
-                    subtitle: Text('Coming Soon'),
-                    onTap: null),
-                const Divider(),
-                ListTile(
-                  title: const Text('Vazgeç',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, color: Colors.red)),
-                  onTap: () => {Navigator.pop(context)},
+        builder: (context) => CustomModalSheetWidget(
+              sheetTitle: "Select Import Source",
+              sheetItems: [
+                ModalSheetItem(
+                  title: "Pick VCF File",
+                  icon: FontAwesomeIcons.fileCode,
+                  onTap: getVcfFromFile,
+                ),
+                ModalSheetItem(
+                  title: "Import from Google Drive",
+                  icon: FontAwesomeIcons.googleDrive,
+                  subtitle: "Coming Soon",
+                  onTap: null,
                 ),
               ],
-            );
-          }),
+            ));
+  }
+
+  showImportActionDialog() {
+    showModalBottomSheet(
+      isDismissible: true,
+      context: context,
+      builder: (context) => CustomModalSheetWidget(
+        sheetTitle: "Select Action",
+        sheetItems: [
+          ModalSheetItem(
+            title: "Add Contacts to Phone",
+            icon: FontAwesomeIcons.fileCode,
+            onTap: addContactsToPhone,
+          )
+        ],
+      ),
     );
+  }
+
+  addContactsToPhone() async {
+    try {
+      await contactProvider.addContacts(selectedContacts);
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.leftSlide,
+        title: 'Contacts added successfully!',
+        btnOkOnPress: () {
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LandingPage(),
+              ),
+              ModalRoute.withName("/"));
+        },
+      ).show();
+    } catch (e) {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.error,
+        animType: AnimType.rightSlide,
+        title: 'Dialog Title',
+        desc: '$e',
+        btnCancelOnPress: () {},
+        btnOkOnPress: () {},
+      ).show();
+    }
   }
 
   getVcfFromFile() async {
@@ -217,7 +231,7 @@ class _ImportContactsPageState extends State<ImportContactsPage> {
     if (isSelectionMode) {
       if (selectedContacts.isNotEmpty) {
         return TextButton(
-            onPressed: () => showImportSourceDialog(),
+            onPressed: () => showImportActionDialog(),
             child: const Text("Actions"));
       } else {
         return Container();
@@ -236,23 +250,5 @@ class _ImportContactsPageState extends State<ImportContactsPage> {
       }
       isSelectionMode = !isSelectionMode;
     });
-  }
-
-  Widget? getContactItemSubtitle(Contact item) {
-    try {
-      var phoneNumber = item.phones.first.number;
-      return Text(phoneNumber);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Widget? getContactPicture(Contact contact) {
-    if (contact.photoOrThumbnail != null &&
-        contact.photoOrThumbnail!.isNotEmpty) {
-      return CircleAvatar(
-          backgroundImage: MemoryImage(contact.photoOrThumbnail!));
-    }
-    return ContactAvatarWidget(contact: contact);
   }
 }

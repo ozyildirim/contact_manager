@@ -1,9 +1,12 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:contact_manager/core/providers/contact_provider.dart';
 import 'package:contact_manager/core/services/contact_service.dart';
+import 'package:contact_manager/widgets/bottom_sheet_widget.dart';
 import 'package:contact_manager/widgets/contact_avatar_widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
 class ManageContactsPage extends StatefulWidget {
@@ -16,6 +19,7 @@ class ManageContactsPage extends StatefulWidget {
 class _ManageContactsPageState extends State<ManageContactsPage> {
   late ContactProvider contactProvider;
   bool isSelectionMode = false;
+  Logger logger = Logger();
 
   List<Contact> selectedContacts = [];
 
@@ -28,6 +32,10 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
 
   fetchContacts() {
     contactProvider.fetchContacts();
+  }
+
+  get isSelectedAll {
+    return selectedContacts.length == contactProvider.contacts!.length;
   }
 
   @override
@@ -53,20 +61,22 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
                   if (index == 0) {
                     if (isSelectionMode) {
                       return ListTile(
-                        title: const Text(
-                          "Select All",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        title: Text(
+                          isSelectedAll ? "Unselect All" : "Select All",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        onTap: selectAllTap,
+                        onTap: isSelectedAll
+                            ? unselectAllContacts
+                            : selectAllContacts,
                       );
                     }
                     return Container();
                   } else {
                     var item = contactProvider.contacts![index - 1];
                     return ListTile(
-                      trailing: getContactPicture(item),
+                      trailing: contactProvider.getContactPicture(item),
                       title: Text(item.displayName),
-                      subtitle: getContactItemSubtitle(item),
+                      subtitle: contactProvider.getContactItemSubtitle(item),
                       onTap: () => toggleContactItem(item),
                       leading: isSelectionMode
                           ? selectedContacts.contains(item)
@@ -84,7 +94,7 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
     );
   }
 
-  selectAllTap() {
+  selectAllContacts() {
     for (var element in contactProvider.contacts!) {
       if (selectedContacts
           .any((selectedElement) => selectedElement.id == element.id)) {
@@ -94,6 +104,12 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
         selectedContacts.add(element);
       });
     }
+  }
+
+  unselectAllContacts() {
+    setState(() {
+      selectedContacts.clear();
+    });
   }
 
   void toggleContactItem(Contact contact) {
@@ -138,97 +154,49 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
     });
   }
 
-  Widget? getContactItemSubtitle(Contact item) {
-    try {
-      var phoneNumber = item.phones.first.number;
-      return Text(phoneNumber);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Widget? getContactPicture(Contact contact) {
-    if (contact.photoOrThumbnail != null &&
-        contact.photoOrThumbnail!.isNotEmpty) {
-      return CircleAvatar(
-          backgroundImage: MemoryImage(contact.photoOrThumbnail!));
-    }
-    return ContactAvatarWidget(contact: contact);
-  }
-
   showActions() {
     showModalBottomSheet(
-        isDismissible: true,
-        context: context,
-        builder: (context) => BottomSheetWidget());
-  }
-
-  Widget BottomSheetWidget() {
-    return SafeArea(
-      bottom: true,
-      child: BottomSheet(
-          enableDrag: false,
-          onClosing: () {},
-          builder: (context) {
-            return Wrap(
-              children: <Widget>[
-                const ListTile(
-                    title: Text(
-                      'Actions',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                    ),
-                    onTap: null),
-                const Divider(),
-                ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.pink,
-                      child: Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                      ),
-                    ),
-                    title: const Text('Delete Selected Contacts'),
-                    onTap: () async {}),
-                const Divider(),
-                ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Icon(
-                        Icons.data_exploration,
-                        color: Colors.white,
-                      ),
-                    ),
-                    /*  */
-                    title: const Text('Export Selected Contacts'),
-                    onTap: () => exportContacts(selectedContacts)),
-                const Divider(),
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.green,
-                    child: Icon(
-                      Icons.map,
-                      color: Colors.white,
-                    ),
-                  ),
-                  title: const Text('Haritadan Seç'),
-                  onTap: () async {},
-                ),
-                ListTile(
-                  title: const Text('Vazgeç',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, color: Colors.red)),
-                  onTap: () => {Navigator.pop(context)},
-                ),
-              ],
-            );
-          }),
+      context: context,
+      builder: (context) => CustomModalSheetWidget(
+        sheetTitle: "Actions",
+        sheetItems: [
+          ModalSheetItem(
+            title: "Delete Selected Contacts",
+            icon: Icons.delete,
+            onTap: () => deleteContacts(selectedContacts),
+          ),
+          ModalSheetItem(
+            title: "Export Selected Contacts",
+            icon: Icons.data_exploration,
+            onTap: () => exportContacts(selectedContacts),
+          ),
+        ],
+      ),
     );
   }
 
   exportContacts(List<Contact> contacts) {
+    logger.i(contacts.toString());
     ContactService.createVcfFile(contacts);
+  }
+
+  deleteContacts(List<Contact> contacts) async {
+    Navigator.pop(context);
+    try {
+      await contactProvider.deleteContacts(contacts);
+      setState(() {
+        isSelectionMode = false;
+        selectedContacts.clear();
+      });
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.leftSlide,
+        title: 'Contacts deleted successfully!',
+        btnOkOnPress: () {
+          // Navigator.pop(context);
+        },
+      ).show();
+    } catch (e) {}
   }
 }
