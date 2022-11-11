@@ -37,7 +37,7 @@ class ContactProvider with ChangeNotifier {
         contacts = await FlutterContacts.getContacts(
             withThumbnail: true, withProperties: true);
         contacts!.forEach((element) {
-          print(element.phones.toString());
+          print(element);
         });
         return contacts;
       }

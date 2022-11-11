@@ -1,3 +1,5 @@
+import 'package:contact_manager/screens/import_contacts_page.dart';
+import 'package:contact_manager/screens/manage_contacts_page.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -9,6 +11,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+
+  var pages = [
+    const ManageContactsPage(),
+    const ImportContactsPage(),
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -24,21 +31,17 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Manage',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.explore),
-            label: 'Discover',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_graph_rounded),
-            label: 'Activity',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            label: 'Import',
           ),
         ],
+      ),
+      body: SafeArea(
+        bottom: true,
+        child: pages[_currentIndex],
       ),
     );
   }
